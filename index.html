@@ -1,11 +1,861 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lumenos — Luxury Home Fragrance</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --cream: #F5F0E8; --charcoal: #1C1A17;
+      --dark: #120F0A; --amber: #C8873A; --amber-light: #E8A84E;
+      --muted: #9A9080; --border: rgba(200,135,58,0.2);
+    }
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Cormorant Garamond', serif; background: var(--dark); color: var(--cream); overflow-x: hidden; }
+
+    nav { position: fixed; top: 0; left: 0; right: 0; z-index: 200; display: flex; align-items: center; justify-content: space-between; padding: 22px 60px; background: rgba(18,15,10,0.96); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border); }
+    .nav-logo { font-size: 22px; font-weight: 300; letter-spacing: 0.25em; text-transform: uppercase; color: var(--cream); text-decoration: none; cursor: pointer; }
+    .nav-logo span { color: var(--amber); }
+    .nav-links { display: flex; gap: 36px; list-style: none; }
+    .nav-links a { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); text-decoration: none; cursor: pointer; transition: color 0.3s; }
+    .nav-links a:hover { color: var(--amber-light); }
+    .nav-right { display: flex; align-items: center; gap: 16px; }
+    .nav-cart-btn { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); background: none; border: 1px solid var(--border); padding: 8px 16px; cursor: pointer; transition: all 0.3s; position: relative; }
+    .nav-cart-btn:hover { border-color: var(--amber); color: var(--amber-light); }
+    .cart-count { position: absolute; top: -8px; right: -8px; background: var(--amber); color: var(--charcoal); font-size: 9px; font-weight: 700; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.3s; }
+    .cart-count.visible { opacity: 1; }
+    .nav-cta { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--charcoal); background: var(--amber); border: none; padding: 10px 22px; cursor: pointer; transition: background 0.3s; }
+    .nav-cta:hover { background: var(--amber-light); }
+
+    #app { padding-top: 73px; min-height: 100vh; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    #toast { position: fixed; bottom: 32px; right: 32px; z-index: 9999; background: var(--amber); color: var(--charcoal); font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; padding: 14px 24px; transform: translateY(80px); opacity: 0; transition: all 0.4s cubic-bezier(0.16,1,0.3,1); pointer-events: none; }
+    #toast.show { transform: translateY(0); opacity: 1; }
+
+    #cart-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 300; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+    #cart-overlay.open { opacity: 1; pointer-events: all; }
+    #cart-panel { position: fixed; top: 0; right: 0; bottom: 0; width: 400px; max-width: 100vw; z-index: 301; background: #1A1510; border-left: 1px solid var(--border); transform: translateX(100%); transition: transform 0.4s cubic-bezier(0.16,1,0.3,1); display: flex; flex-direction: column; }
+    #cart-panel.open { transform: translateX(0); }
+    .cart-header { display: flex; justify-content: space-between; align-items: center; padding: 32px 28px 24px; border-bottom: 1px solid var(--border); }
+    .cart-title { font-size: 24px; font-weight: 300; }
+    .cart-close { background: none; border: none; color: var(--muted); font-size: 28px; cursor: pointer; line-height: 1; padding: 0 4px; }
+    .cart-close:hover { color: var(--cream); }
+    .cart-items { flex: 1; overflow-y: auto; padding: 24px 28px; }
+    .cart-empty { text-align: center; padding: 60px 0; color: var(--muted); font-size: 16px; }
+    .cart-item { display: flex; gap: 16px; padding: 16px 0; border-bottom: 1px solid var(--border); }
+    .cart-item-name { font-size: 18px; font-weight: 300; margin-bottom: 4px; }
+    .cart-item-sub { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 8px; }
+    .cart-item-price { color: var(--amber-light); font-size: 16px; }
+    .cart-item-remove { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; background: none; border: none; color: var(--muted); cursor: pointer; padding: 4px 0; display: block; margin-top: 6px; }
+    .cart-item-remove:hover { color: var(--cream); }
+    .cart-footer { padding: 24px 28px; border-top: 1px solid var(--border); }
+    .cart-total { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .cart-total-label { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+    .cart-total-price { font-size: 28px; font-weight: 300; color: var(--amber-light); }
+    .cart-checkout-btn { width: 100%; font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; background: var(--amber); color: var(--charcoal); border: none; padding: 18px; cursor: pointer; transition: background 0.3s; }
+    .cart-checkout-btn:hover { background: var(--amber-light); }
+
+    .btn-primary { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--charcoal); background: var(--amber); border: none; padding: 16px 36px; cursor: pointer; display: inline-block; transition: all 0.3s; }
+    .btn-primary:hover { background: var(--amber-light); transform: translateY(-2px); box-shadow: 0 12px 40px rgba(200,135,58,0.3); }
+    .btn-ghost { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--cream); background: none; border: 1px solid var(--border); padding: 16px 36px; cursor: pointer; display: inline-block; transition: all 0.3s; }
+    .btn-ghost:hover { border-color: var(--amber); color: var(--amber-light); }
+
+    .page-header { padding: 80px 60px 60px; border-bottom: 1px solid var(--border); }
+    .page-breadcrumb { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 24px; cursor: pointer; display: inline-block; }
+    .page-breadcrumb:hover { color: var(--amber); }
+    .page-title { font-size: clamp(40px, 5vw, 72px); font-weight: 300; line-height: 1.05; }
+    .page-title em { font-style: italic; color: var(--amber-light); }
+    .page-subtitle { font-size: 18px; color: var(--muted); margin-top: 16px; line-height: 1.7; max-width: 560px; }
+    .section-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--amber); margin-bottom: 40px; display: flex; align-items: center; gap: 16px; }
+    .section-label::after { content: ''; flex: 1; max-width: 60px; height: 1px; background: var(--border); }
+    .inner-content { padding: 60px; }
+
+    .products-grid-full { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; padding: 60px; }
+    .product-card { background: rgba(200,135,58,0.03); border: 1px solid var(--border); transition: border-color 0.4s, transform 0.3s; }
+    .product-card:hover { border-color: var(--amber); transform: translateY(-4px); }
+    .product-visual { display: flex; align-items: center; justify-content: center; padding: 40px; background: linear-gradient(135deg,rgba(200,135,58,0.06),transparent); position: relative; height: 200px; overflow: hidden; }
+    .product-visual::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 60%,rgba(200,135,58,0.15),transparent 60%); opacity: 0; transition: opacity 0.4s; }
+    .product-card:hover .product-visual::after { opacity: 1; }
+    .product-visual svg { transition: transform 0.5s ease; }
+    .product-card:hover .product-visual svg { transform: scale(1.05) translateY(-4px); }
+    .product-info { padding: 28px; }
+    .product-name { font-size: 21px; font-weight: 300; margin-bottom: 6px; }
+    .product-sub { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+    .product-notes { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 16px; }
+    .product-price { font-size: 20px; color: var(--amber-light); display: flex; justify-content: space-between; align-items: center; }
+    .product-add { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--charcoal); background: var(--amber); border: none; padding: 8px 16px; cursor: pointer; transition: background 0.3s; }
+    .product-add:hover { background: var(--amber-light); }
+    .seasonal-badge { display: inline-block; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; background: var(--amber); color: var(--charcoal); padding: 4px 10px; margin: 16px 16px -8px; }
+
+    .prose { max-width: 720px; }
+    .prose h3 { font-size: 28px; font-weight: 300; margin-bottom: 16px; margin-top: 48px; }
+    .prose h3:first-child { margin-top: 0; }
+    .prose h3 em { font-style: italic; color: var(--amber-light); }
+    .prose p { font-size: 17px; line-height: 1.8; color: var(--muted); margin-bottom: 20px; }
+    .prose ul { list-style: none; margin-bottom: 20px; }
+    .prose ul li { font-size: 16px; line-height: 1.8; color: var(--muted); padding-left: 22px; position: relative; margin-bottom: 8px; }
+    .prose ul li::before { content: '✦'; position: absolute; left: 0; color: var(--amber); font-size: 10px; top: 6px; }
+
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 48px; }
+    .info-card { padding: 36px; border: 1px solid var(--border); transition: border-color 0.3s; }
+    .info-card:hover { border-color: var(--amber); }
+    .info-card h4 { font-size: 22px; font-weight: 300; margin-bottom: 12px; }
+    .info-card p { font-size: 15px; line-height: 1.7; color: var(--muted); }
+
+    .faq-item { border-bottom: 1px solid var(--border); }
+    .faq-question { display: flex; justify-content: space-between; align-items: center; padding: 28px 0; cursor: pointer; font-size: 20px; font-weight: 300; transition: color 0.3s; gap: 20px; }
+    .faq-question:hover { color: var(--amber-light); }
+    .faq-toggle { font-size: 24px; color: var(--amber); font-family: 'DM Mono', monospace; flex-shrink: 0; }
+    .faq-answer { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+    .faq-answer.open { max-height: 400px; }
+    .faq-answer-inner { padding: 0 0 28px; font-size: 16px; line-height: 1.8; color: var(--muted); }
+
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; }
+    .contact-form { display: flex; flex-direction: column; gap: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--amber); }
+    .form-input, .form-textarea, .form-select { background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: var(--cream); font-family: 'Cormorant Garamond', serif; font-size: 17px; padding: 14px 18px; outline: none; transition: border-color 0.3s; resize: none; }
+    .form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--amber); }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--muted); }
+    .form-textarea { height: 140px; }
+    .form-select { cursor: pointer; }
+    .form-select option { background: #1A1510; }
+    .contact-info-item { margin-bottom: 36px; }
+    .contact-info-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; }
+    .contact-info-value { font-size: 18px; color: var(--muted); line-height: 1.6; }
+
+    .source-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); margin-top: 48px; }
+    .source-card { background: var(--dark); padding: 36px 24px; transition: background 0.3s; }
+    .source-card:hover { background: rgba(200,135,58,0.05); }
+    .source-flag { font-size: 32px; margin-bottom: 14px; }
+    .source-region { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; }
+    .source-name { font-size: 20px; font-weight: 300; margin-bottom: 10px; }
+    .source-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    .press-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-top: 48px; }
+    .press-item { padding: 36px; border: 1px solid var(--border); transition: border-color 0.3s; }
+    .press-item:hover { border-color: var(--amber); }
+    .press-pub { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--amber); margin-bottom: 14px; }
+    .press-quote { font-size: 20px; font-weight: 300; font-style: italic; line-height: 1.5; margin-bottom: 16px; }
+    .press-date { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; color: var(--muted); }
+
+    .care-steps { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; margin-top: 48px; }
+    .care-step { padding: 36px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+    .care-num { font-size: 72px; font-weight: 300; color: rgba(200,135,58,0.08); position: absolute; bottom: -8px; right: 16px; line-height: 1; }
+    .care-step h4 { font-size: 22px; font-weight: 300; margin-bottom: 12px; }
+    .care-step p { font-size: 15px; line-height: 1.7; color: var(--muted); }
+
+    .wholesale-table { width: 100%; border-collapse: collapse; margin-top: 40px; }
+    .wholesale-table th { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--amber); padding: 16px 20px; text-align: left; border-bottom: 1px solid var(--border); }
+    .wholesale-table td { font-size: 16px; color: var(--muted); padding: 18px 20px; border-bottom: 1px solid rgba(200,135,58,0.08); }
+    .wholesale-table tr:hover td { color: var(--cream); background: rgba(200,135,58,0.03); }
+
+    .sbar-wrap { margin-bottom: 18px; }
+    .sbar-top { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .sbar-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); }
+    .sbar-pct { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--amber); }
+    .sbar-track { height: 3px; background: rgba(200,135,58,0.15); }
+    .sbar-fill { height: 100%; background: var(--amber); transition: width 1s ease; }
+
+    .insta-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 3px; }
+    .insta-cell { aspect-ratio: 1; display: flex; align-items: flex-end; padding: 14px; cursor: pointer; border: 1px solid rgba(200,135,58,0.08); transition: border-color 0.3s; }
+    .insta-cell:hover { border-color: var(--amber); }
+    .insta-cell-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+
+    .hero { min-height: calc(100vh - 73px); display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; padding: 60px 60px 80px; }
+    .hero-bg { position: absolute; inset: 0; z-index: 0; background: radial-gradient(ellipse 70% 60% at 65% 45%, rgba(200,135,58,0.12) 0%, transparent 70%), radial-gradient(ellipse 40% 50% at 20% 80%, rgba(200,135,58,0.06) 0%, transparent 60%), var(--dark); }
+    .hero-flame { position: absolute; right: 12%; top: 50%; transform: translateY(-52%); width: 280px; opacity: 0.9; animation: float 6s ease-in-out infinite; }
+    @keyframes float { 0%,100%{transform:translateY(-52%)} 50%{transform:translateY(-56%)} }
+    .hero-content { position: relative; z-index: 1; max-width: 640px; }
+    .hero-eyebrow { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--amber); margin-bottom: 28px; display: flex; align-items: center; gap: 16px; animation: fadeUp 0.8s ease both 0.2s; }
+    .hero-eyebrow::before { content: ''; width: 40px; height: 1px; background: var(--amber); flex-shrink: 0; }
+    .hero h1 { font-size: clamp(56px,7vw,96px); font-weight: 300; line-height: 1.0; letter-spacing: -0.01em; margin-bottom: 32px; animation: fadeUp 0.8s ease both 0.35s; }
+    .hero h1 em { font-style: italic; color: var(--amber-light); }
+    .hero-sub { font-size: 18px; font-weight: 300; line-height: 1.7; color: var(--muted); max-width: 440px; margin-bottom: 52px; animation: fadeUp 0.8s ease both 0.5s; }
+    .hero-actions { display: flex; align-items: center; gap: 32px; animation: fadeUp 0.8s ease both 0.65s; }
+    .hero-stats { position: absolute; bottom: 60px; right: 60px; z-index: 1; display: flex; gap: 48px; }
+    .stat { text-align: right; }
+    .stat-num { font-size: 36px; font-weight: 300; color: var(--amber-light); display: block; line-height: 1; }
+    .stat-label { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-top: 6px; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+
+    .marquee-wrap { overflow: hidden; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); background: rgba(200,135,58,0.04); padding: 18px 0; }
+    .marquee { display: flex; white-space: nowrap; animation: marquee 20s linear infinite; }
+    @keyframes marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .marquee-item { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); padding: 0 40px; }
+    .marquee-item span { color: var(--amber); margin-right: 36px; }
+
+    .home-section { padding: 120px 60px; }
+    .philosophy { display: grid; grid-template-columns: 1fr 1fr; gap: 100px; align-items: center; }
+    .philosophy-text h2 { font-size: clamp(36px,4vw,56px); font-weight: 300; line-height: 1.15; margin-bottom: 28px; }
+    .philosophy-text h2 em { font-style: italic; color: var(--amber-light); }
+    .philosophy-text p { font-size: 17px; line-height: 1.8; color: var(--muted); margin-bottom: 20px; }
+    .philosophy-visual { position: relative; aspect-ratio: 3/4; background: linear-gradient(135deg,rgba(200,135,58,0.08),rgba(200,135,58,0.02)); border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; justify-content: center; }
+    .philosophy-visual::before { content: ''; position: absolute; inset: 20px; border: 1px solid rgba(200,135,58,0.1); pointer-events: none; }
+
+    .home-products-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; }
+    .home-product-card { background: rgba(200,135,58,0.04); border: 1px solid var(--border); transition: border-color 0.4s; cursor: pointer; }
+    .home-product-card:hover { border-color: var(--amber); }
+    .home-product-card:first-child { grid-row: span 2; }
+    .home-product-visual { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg,rgba(200,135,58,0.06),transparent); padding: 40px; position: relative; overflow: hidden; }
+    .home-product-card:first-child .home-product-visual { aspect-ratio: auto; height: 520px; }
+    .home-product-visual::after { content: ''; position: absolute; inset: 0; background: radial-gradient(circle at 50% 60%,rgba(200,135,58,0.15),transparent 60%); opacity: 0; transition: opacity 0.4s; }
+    .home-product-card:hover .home-product-visual::after { opacity: 1; }
+    .home-product-visual svg { transition: transform 0.5s ease; }
+    .home-product-card:hover .home-product-visual svg { transform: scale(1.05) translateY(-4px); }
+
+    .process-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border); margin-top: 60px; }
+    .process-step { background: var(--dark); padding: 48px 36px; position: relative; overflow: hidden; transition: background 0.4s; }
+    .process-step:hover { background: rgba(200,135,58,0.05); }
+    .process-num { font-size: 80px; font-weight: 300; color: rgba(200,135,58,0.1); line-height: 1; position: absolute; top: 20px; right: 24px; }
+    .process-title { font-size: 22px; font-weight: 300; margin-bottom: 12px; }
+    .process-desc { font-size: 14px; line-height: 1.7; color: var(--muted); }
+
+    .testimonials-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 32px; }
+    .testimonial { padding: 40px; border: 1px solid var(--border); transition: border-color 0.3s,transform 0.3s; }
+    .testimonial:hover { border-color: var(--amber); transform: translateY(-4px); }
+    .testimonial-quote { font-size: 52px; line-height: 0.5; color: var(--amber); margin-bottom: 20px; font-style: italic; }
+    .testimonial-text { font-size: 17px; line-height: 1.7; font-style: italic; margin-bottom: 28px; }
+    .testimonial-author { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--amber); }
+    .testimonial-stars { color: var(--amber-light); font-size: 13px; margin-bottom: 16px; }
+
+    .newsletter-wrap { background: linear-gradient(135deg,rgba(200,135,58,0.1),rgba(200,135,58,0.03)); border: 1px solid var(--border); padding: 80px; text-align: center; position: relative; overflow: hidden; }
+    .newsletter-wrap::before { content: ''; position: absolute; inset: 16px; border: 1px solid rgba(200,135,58,0.08); pointer-events: none; }
+    .newsletter-wrap h2 { font-size: clamp(32px,4vw,52px); font-weight: 300; margin-bottom: 16px; }
+    .newsletter-wrap h2 em { font-style: italic; color: var(--amber-light); }
+    .newsletter-wrap > p { font-size: 17px; color: var(--muted); margin-bottom: 40px; }
+    .newsletter-form { display: flex; max-width: 480px; margin: 0 auto; }
+    .newsletter-form input { flex: 1; padding: 16px 24px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); border-right: none; color: var(--cream); font-family: 'DM Mono', monospace; font-size: 12px; letter-spacing: 0.1em; outline: none; transition: border-color 0.3s; }
+    .newsletter-form input:focus { border-color: var(--amber); }
+    .newsletter-form input::placeholder { color: var(--muted); }
+    .newsletter-form button { font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--charcoal); background: var(--amber); border: 1px solid var(--amber); padding: 16px 28px; cursor: pointer; white-space: nowrap; transition: background 0.3s; }
+    .newsletter-form button:hover { background: var(--amber-light); }
+
+    .site-footer { padding: 80px 60px 40px; border-top: 1px solid var(--border); }
+    .footer-top { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 60px; margin-bottom: 60px; }
+    .footer-brand-name { font-size: 28px; font-weight: 300; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 16px; }
+    .footer-brand-name span { color: var(--amber); }
+    .footer-tagline { font-size: 15px; color: var(--muted); line-height: 1.6; }
+    .footer-col-title { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--amber); margin-bottom: 24px; }
+    .footer-links { list-style: none; }
+    .footer-links li { margin-bottom: 12px; }
+    .footer-links a { font-size: 15px; color: var(--muted); text-decoration: none; cursor: pointer; transition: color 0.3s; }
+    .footer-links a:hover { color: var(--cream); }
+    .footer-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 40px; border-top: 1px solid var(--border); }
+    .footer-copy { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; color: var(--muted); }
+    .footer-socials { display: flex; gap: 20px; }
+    .footer-socials a { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); text-decoration: none; cursor: pointer; transition: color 0.3s; }
+    .footer-socials a:hover { color: var(--amber); }
+    .mini-footer { padding: 32px 60px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .mini-footer-copy { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; color: var(--muted); }
+    .mini-footer-back { font-family: 'DM Mono', monospace; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); cursor: pointer; background: none; border: none; }
+    .mini-footer-back:hover { color: var(--amber); }
+
+    @media (max-width: 960px) {
+      nav { padding: 18px 24px; }
+      .nav-links { display: none; }
+      .hero, .home-section { padding: 40px 24px 60px; }
+      .hero-stats, .hero-flame { display: none; }
+      .philosophy { grid-template-columns: 1fr; gap: 40px; }
+      .home-products-grid { grid-template-columns: 1fr; }
+      .home-product-card:first-child { grid-row: auto; }
+      .home-product-card:first-child .home-product-visual { height: auto; aspect-ratio: 1; }
+      .process-grid { grid-template-columns: 1fr 1fr; }
+      .testimonials-grid { grid-template-columns: 1fr; }
+      .footer-top { grid-template-columns: 1fr 1fr; gap: 32px; }
+      .newsletter-wrap { padding: 40px 24px; }
+      .inner-content { padding: 32px 24px; }
+      .products-grid-full { grid-template-columns: 1fr 1fr; padding: 24px; gap: 16px; }
+      .info-grid, .contact-grid, .press-grid { grid-template-columns: 1fr; }
+      .source-grid { grid-template-columns: 1fr 1fr; }
+      .care-steps { grid-template-columns: 1fr 1fr; }
+      .page-header { padding: 40px 24px 36px; }
+      .mini-footer { padding: 24px; }
+    }
+    @media (max-width: 540px) {
+      .products-grid-full, .source-grid, .care-steps, .press-grid { grid-template-columns: 1fr; }
+      .process-grid { grid-template-columns: 1fr; }
+      .insta-grid { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
 </head>
 <body>
-    
+
+<nav>
+  <div class="nav-logo" onclick="goTo('home')">Lum<span>e</span>nos</div>
+  <ul class="nav-links">
+    <li><a onclick="goTo('home','about')">Philosophy</a></li>
+    <li><a onclick="goTo('all-candles')">Collection</a></li>
+    <li><a onclick="goTo('home','process')">Craft</a></li>
+    <li><a onclick="goTo('home','reviews')">Stories</a></li>
+  </ul>
+  <div class="nav-right">
+    <button class="nav-cart-btn" onclick="openCart()">
+      Cart <div class="cart-count" id="cart-count">0</div>
+    </button>
+    <button class="nav-cta" onclick="goTo('all-candles')">Shop Now</button>
+  </div>
+</nav>
+
+<div id="app">
+
+<div class="page active" id="page-home">
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <svg class="hero-flame" viewBox="0 0 200 420" fill="none">
+      <ellipse cx="100" cy="60" rx="18" ry="30" fill="rgba(232,168,78,0.15)"/>
+      <path d="M100 20 C88 35 78 50 82 68 C86 82 100 88 100 88 C100 88 114 82 118 68 C122 50 112 35 100 20Z" fill="url(#hfG)"/>
+      <path d="M100 38 C95 47 92 55 94 65 C96 72 100 75 100 75 C100 75 104 72 106 65 C108 55 105 47 100 38Z" fill="rgba(255,240,200,0.9)"/>
+      <line x1="100" y1="88" x2="100" y2="100" stroke="#4A3728" stroke-width="2"/>
+      <rect x="72" y="100" width="56" height="200" rx="4" fill="#2A211A"/>
+      <rect x="72" y="100" width="56" height="200" rx="4" fill="url(#hcG)" opacity="0.8"/>
+      <path d="M72 130 C68 140 70 155 72 165 L72 130Z" fill="rgba(200,135,58,0.3)"/>
+      <path d="M128 145 C132 155 130 170 128 180 L128 145Z" fill="rgba(200,135,58,0.2)"/>
+      <ellipse cx="100" cy="305" rx="44" ry="14" fill="#1A1410"/>
+      <rect x="60" y="298" width="80" height="16" rx="8" fill="#221C15"/>
+      <rect x="82" y="175" width="36" height="50" rx="2" fill="rgba(255,255,255,0.04)" stroke="rgba(200,135,58,0.2)" stroke-width="0.5"/>
+      <line x1="86" y1="188" x2="114" y2="188" stroke="rgba(200,135,58,0.3)" stroke-width="0.5"/>
+      <line x1="88" y1="196" x2="112" y2="196" stroke="rgba(200,135,58,0.2)" stroke-width="0.5"/>
+      <defs>
+        <linearGradient id="hfG" x1="100" y1="20" x2="100" y2="88" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFF3C0"/><stop offset="40%" stop-color="#F5A623"/><stop offset="100%" stop-color="#C8501A"/></linearGradient>
+        <linearGradient id="hcG" x1="72" y1="0" x2="128" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#C8873A" stop-opacity="0.15"/><stop offset="50%" stop-color="#C8873A" stop-opacity="0.05"/><stop offset="100%" stop-color="#C8873A" stop-opacity="0.1"/></linearGradient>
+      </defs>
+    </svg>
+    <div class="hero-content">
+      <p class="hero-eyebrow">Artisan home fragrance</p>
+      <h1>Scent is<br/><em>memory</em><br/>made light</h1>
+      <p class="hero-sub">Hand-poured candles crafted from botanicals sourced across four continents. Each flame tells a story.</p>
+      <div class="hero-actions">
+        <button class="btn-primary" onclick="goTo('all-candles')">Explore Collection</button>
+        <button class="btn-ghost" onclick="goTo('home','about')">Our Philosophy</button>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-num">12</span><span class="stat-label">Signature blends</span></div>
+      <div class="stat"><span class="stat-num">4</span><span class="stat-label">Continents sourced</span></div>
+      <div class="stat"><span class="stat-num">60+</span><span class="stat-label">Hours of burn</span></div>
+    </div>
+  </section>
+
+  <div class="marquee-wrap"><div class="marquee">
+    <span class="marquee-item"><span>✦</span> Hand-poured in small batches</span>
+    <span class="marquee-item"><span>✦</span> Botanical wax blend</span>
+    <span class="marquee-item"><span>✦</span> Cruelty free & vegan</span>
+    <span class="marquee-item"><span>✦</span> Free shipping over $75</span>
+    <span class="marquee-item"><span>✦</span> Recyclable packaging</span>
+    <span class="marquee-item"><span>✦</span> 60+ hour burn time</span>
+    <span class="marquee-item"><span>✦</span> Hand-poured in small batches</span>
+    <span class="marquee-item"><span>✦</span> Botanical wax blend</span>
+    <span class="marquee-item"><span>✦</span> Cruelty free & vegan</span>
+    <span class="marquee-item"><span>✦</span> Free shipping over $75</span>
+    <span class="marquee-item"><span>✦</span> Recyclable packaging</span>
+    <span class="marquee-item"><span>✦</span> 60+ hour burn time</span>
+  </div></div>
+
+  <section class="home-section" id="about">
+    <div class="section-label">Our Philosophy</div>
+    <div class="philosophy">
+      <div class="philosophy-text">
+        <h2>Fragrance as a<br/><em>ritual</em>, not a<br/>commodity.</h2>
+        <p>We believe that what fills the air of your home shapes your inner world. Every Lumenos candle begins with a question: what feeling should this space hold?</p>
+        <p>Our master blenders travel to source the rarest botanicals — aged cedarwood from Atlas mountains, Bulgarian rose absolute, wild hinoki from Japanese forests.</p>
+        <p>From wick to vessel, every detail is an act of intention.</p>
+        <br/>
+        <button class="btn-ghost" onclick="goTo('sourcing')">Explore Our Sourcing →</button>
+      </div>
+      <div class="philosophy-visual">
+        <svg viewBox="0 0 300 380" width="260" fill="none">
+          <rect x="40" y="80" width="50" height="220" rx="3" fill="#1E1710"/>
+          <path d="M65 50 C58 62 53 72 56 84 C59 92 65 96 65 96 C65 96 71 92 74 84 C77 72 72 62 65 50Z" fill="url(#f1h)"/>
+          <line x1="65" y1="96" x2="65" y2="82" stroke="#3A2A1A" stroke-width="1.5"/>
+          <rect x="120" y="130" width="60" height="170" rx="3" fill="#221A12"/>
+          <path d="M150 100 C143 112 138 122 141 134 C144 142 150 146 150 146 C150 146 156 142 159 134 C162 122 157 112 150 100Z" fill="url(#f2h)"/>
+          <line x1="150" y1="146" x2="150" y2="132" stroke="#3A2A1A" stroke-width="1.5"/>
+          <rect x="210" y="200" width="46" height="100" rx="3" fill="#1C1510"/>
+          <path d="M233 174 C228 182 225 188 227 196 C229 202 233 205 233 205 C233 205 237 202 239 196 C241 188 238 182 233 174Z" fill="url(#f3h)"/>
+          <line x1="233" y1="205" x2="233" y2="197" stroke="#3A2A1A" stroke-width="1.5"/>
+          <rect x="20" y="300" width="260" height="8" rx="4" fill="#161210"/>
+          <ellipse cx="65" cy="68" rx="28" ry="20" fill="rgba(200,135,58,0.1)"/>
+          <ellipse cx="150" cy="118" rx="34" ry="24" fill="rgba(200,135,58,0.12)"/>
+          <ellipse cx="233" cy="188" rx="24" ry="17" fill="rgba(200,135,58,0.08)"/>
+          <defs>
+            <linearGradient id="f1h" x1="65" y1="50" x2="65" y2="96" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFF3C0"/><stop offset="50%" stop-color="#F5A623"/><stop offset="100%" stop-color="#C8501A"/></linearGradient>
+            <linearGradient id="f2h" x1="150" y1="100" x2="150" y2="146" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFF3C0"/><stop offset="50%" stop-color="#F5A623"/><stop offset="100%" stop-color="#C8501A"/></linearGradient>
+            <linearGradient id="f3h" x1="233" y1="174" x2="233" y2="205" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFF3C0"/><stop offset="50%" stop-color="#F5A623"/><stop offset="100%" stop-color="#C8501A"/></linearGradient>
+          </defs>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section" id="products" style="background:rgba(255,255,255,0.015);padding-top:80px;padding-bottom:80px;">
+    <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:64px;">
+      <div><div class="section-label">The Collection</div><h2 style="font-size:clamp(36px,4vw,52px);font-weight:300;line-height:1.1;">Twelve<br/><em style="font-style:italic;color:var(--amber-light)">singular</em> blends</h2></div>
+      <button class="btn-ghost" onclick="goTo('all-candles')">View All</button>
+    </div>
+    <div class="home-products-grid">
+      <div class="home-product-card" onclick="goTo('all-candles')">
+        <div class="home-product-visual"><svg viewBox="0 0 140 200" width="110" fill="none"><rect x="35" y="68" width="70" height="124" rx="4" fill="#1E1710"/><path d="M70 30 C61 46 55 59 59 72 C63 82 70 87 70 87 C70 87 77 82 81 72 C85 59 79 46 70 30Z" fill="url(#hpf1)"/><line x1="70" y1="87" x2="70" y2="71" stroke="#3A2A1A" stroke-width="2"/><ellipse cx="70" cy="50" rx="32" ry="22" fill="rgba(200,135,58,0.1)"/><rect x="46" y="118" width="48" height="44" rx="2" fill="rgba(255,255,255,0.03)" stroke="rgba(200,135,58,0.2)" stroke-width="0.5"/><line x1="52" y1="130" x2="88" y2="130" stroke="rgba(200,135,58,0.4)" stroke-width="0.5"/><defs><linearGradient id="hpf1" x1="70" y1="30" x2="70" y2="87" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFF3C0"/><stop offset="50%" stop-color="#F5A623"/><stop offset="100%" stop-color="#C8501A"/></linearGradient></defs></svg></div>
+        <div class="product-info"><div class="product-name">Atlas Cedarwood & Smoke</div><div class="product-sub">Signature — 12oz vessel</div><div class="product-price">$68 <button class="product-add" onclick="event.stopPropagation();addToCart('Atlas Cedarwood & Smoke','Signature — 12oz',68)">Add</button></div></div>
+      </div>
+      <div class="home-product-card" onclick="goTo('all-candles')">
+        <div class="home-product-visual"><svg viewBox="0 0 120 160" width="90" fill="none"><rect x="25" y="45" width="70" height="106" rx="4" fill="#1C1510"/><path d="M60 14 C53 25 49 33 52 43 C55 50 60 54 60 54 C60 54 65 50 68 43 C71 33 67 25 60 14Z" fill="url(#hpf2)"/><line x1="60" y1="54" x2="60" y2="44" stroke="#3A2A1A" stroke-width="1.5"/><ellipse cx="60" cy="29" rx="26" ry="17" fill="rgba(200,135,58,0.09)"/><defs><linearGradient id="hpf2" x1="60" y1="14" x2="60" y2="54" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFF3C0"/><stop offset="50%" stop-color="#F5A623"/><stop offset="100%" stop-color="#C8501A"/></linearGradient></defs></svg></div>
+        <div class="product-info"><div class="product-name">Bulgarian Rose & Oud</div><div class="product-sub">Floral — 8oz vessel</div><div class="product-price">$54 <button class="product-add" onclick="event.stopPropagation();addToCart('Bulgarian Rose & Oud','Floral — 8oz',54)">Add</button></div></div>
+      </div>
+      <div class="home-product-card" onclick="goTo('all-candles')">
+        <div class="home-product-visual"><svg viewBox="0 0 120 160" width="90" fill="none"><rect x="24" y="50" width="72" height="100" rx="36" fill="#1A1410"/><path d="M60 20 C53 30 49 38 52 48 C55 55 60 58 60 58 C60 58 65 55 68 48 C71 38 67 30 60 20Z" fill="url(#hpf3)"/><line x1="60" y1="58" x2="60" y2="50" stroke="#3A2A1A" stroke-width="1.5"/><ellipse cx="60" cy="35" rx="24" ry="16" fill="rgba(200,135,58,0.1)"/><defs><linearGradient id="hpf3" x1="60" y1="20" x2="60" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFF3C0"/><stop offset="50%" stop-color="#F5A623"/><stop offset="100%" stop-color="#C8501A"/></linearGradient></defs></svg></div>
+        <div class="product-info"><div class="product-name">Wild Hinoki & Sea Salt</div><div class="product-sub">Forest — 8oz vessel</div><div class="product-price">$54 <button class="product-add" onclick="event.stopPropagation();addToCart('Wild Hinoki & Sea Salt','Forest — 8oz',54)">Add</button></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="home-section" id="process">
+    <div class="section-label">The Craft</div>
+    <h2 style="font-size:clamp(32px,4vw,52px);font-weight:300;max-width:500px;line-height:1.15;">From source to <em style="font-style:italic;color:var(--amber-light)">flame</em>,<br/>nothing is rushed.</h2>
+    <div class="process-grid">
+      <div class="process-step"><div class="process-num">01</div><div class="process-title">Global Sourcing</div><div class="process-desc">We partner with ethical farms across Morocco, Bulgaria, Japan, and Oregon to source botanicals at peak potency.</div></div>
+      <div class="process-step"><div class="process-num">02</div><div class="process-title">Master Blending</div><div class="process-desc">Our resident perfumer layers top, heart, and base notes over weeks of testing until each blend hits its emotional mark.</div></div>
+      <div class="process-step"><div class="process-num">03</div><div class="process-title">Small-Batch Pouring</div><div class="process-desc">Each candle is poured in batches of 24. Temperature, timing, and wick placement are managed by hand every time.</div></div>
+      <div class="process-step"><div class="process-num">04</div><div class="process-title">Burn-Tested</div><div class="process-desc">Every blend is burn-tested across multiple vessels before release. We only ship what we'd burn in our own homes.</div></div>
+    </div>
+  </section>
+
+  <section class="home-section" id="reviews" style="background:rgba(200,135,58,0.03);">
+    <div class="section-label">Stories</div>
+    <div class="testimonials-grid">
+      <div class="testimonial"><div class="testimonial-stars">★★★★★</div><div class="testimonial-quote">"</div><div class="testimonial-text">The Atlas Cedarwood changed how I think about evening rituals. My apartment feels like a different world when it's burning.</div><div class="testimonial-author">— Margaux T., New York</div></div>
+      <div class="testimonial"><div class="testimonial-stars">★★★★★</div><div class="testimonial-quote">"</div><div class="testimonial-text">I've tried dozens of luxury candle brands. Lumenos is the only one where I can smell the difference in ingredient quality the moment the box opens.</div><div class="testimonial-author">— Oliver K., London</div></div>
+      <div class="testimonial"><div class="testimonial-stars">★★★★★</div><div class="testimonial-quote">"</div><div class="testimonial-text">Three years of gifting these to everyone I know. Not a single complaint. They always ask where to get more.</div><div class="testimonial-author">— Sofia R., Milan</div></div>
+    </div>
+  </section>
+
+  <section class="home-section" style="padding-top:0;">
+    <div class="newsletter-wrap">
+      <p class="section-label" style="justify-content:center;margin-bottom:24px;">Stay close</p>
+      <h2>The light, <em>delivered</em><br/>to your door.</h2>
+      <p>New blends, seasonal editions, and quiet dispatches from our studio.</p>
+      <div class="newsletter-form"><input type="email" id="nl-home" placeholder="your@email.com"/><button onclick="subscribe('nl-home')">Subscribe</button></div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="footer-top">
+      <div><div class="footer-brand-name">Lum<span>e</span>nos</div><p class="footer-tagline">Artisan candles hand-poured in<br/>small batches since 2019.<br/>Portland, Oregon.</p></div>
+      <div>
+        <div class="footer-col-title">Shop</div>
+        <ul class="footer-links">
+          <li><a onclick="goTo('all-candles')">All Candles</a></li>
+          <li><a onclick="goTo('signature')">Signature Collection</a></li>
+          <li><a onclick="goTo('seasonal')">Seasonal Editions</a></li>
+          <li><a onclick="goTo('gift-sets')">Gift Sets</a></li>
+          <li><a onclick="goTo('accessories')">Accessories</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Studio</div>
+        <ul class="footer-links">
+          <li><a onclick="goTo('home','about')">Our Philosophy</a></li>
+          <li><a onclick="goTo('home','process')">The Craft</a></li>
+          <li><a onclick="goTo('sourcing')">Ingredient Sourcing</a></li>
+          <li><a onclick="goTo('sustainability')">Sustainability</a></li>
+          <li><a onclick="goTo('press')">Press</a></li>
+        </ul>
+      </div>
+      <div>
+        <div class="footer-col-title">Help</div>
+        <ul class="footer-links">
+          <li><a onclick="goTo('shipping')">Shipping & Returns</a></li>
+          <li><a onclick="goTo('candle-care')">Candle Care</a></li>
+          <li><a onclick="goTo('faq')">FAQ</a></li>
+          <li><a onclick="goTo('contact')">Contact</a></li>
+          <li><a onclick="goTo('wholesale')">Wholesale</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <div class="footer-copy">© 2025 Lumenos · All rights reserved</div>
+      <div class="footer-socials">
+        <a onclick="goTo('instagram')">Instagram</a>
+        <a onclick="goTo('pinterest')">Pinterest</a>
+        <a onclick="goTo('newsletter-signup')">Newsletter</a>
+      </div>
+    </div>
+  </footer>
+</div>
+<div class="page" id="page-all-candles">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title">The <em>Collection</em></h1><p class="page-subtitle">Twelve blends, each a world of its own. Hand-poured in Portland, Oregon.</p></div>
+  <div class="products-grid-full" id="grid-all"></div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Back to Home</button></div>
+</div>
+
+<div class="page" id="page-signature">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('all-candles')">← All Candles</div><h1 class="page-title"><em>Signature</em> Collection</h1><p class="page-subtitle">Our founding lineup — six blends with us since 2019. Refined, never reformulated.</p></div>
+  <div class="products-grid-full" id="grid-signature"></div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-seasonal">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('all-candles')">← All Candles</div><h1 class="page-title"><em>Seasonal</em> Editions</h1><p class="page-subtitle">Limited batches released four times a year. Once they're gone, they're gone.</p></div>
+  <div class="inner-content">
+    <div class="section-label">Winter 2025</div>
+    <div class="products-grid-full" id="grid-seasonal" style="padding:0 0 40px;"></div>
+    <div class="prose"><h3>About Seasonal Editions</h3><p>Each release is developed around a single evocative concept — a landscape, a memory, a time of day. Our blenders spend the off-season traveling and sketching olfactory notes before the brief production window opens. Seasonal candles are produced in batches of 200 units maximum.</p><p>Subscribe to our newsletter to be first to know when new editions drop.</p><br/><button class="btn-primary" onclick="goTo('newsletter-signup')">Get Early Access</button></div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-gift-sets">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('all-candles')">← All Candles</div><h1 class="page-title">Gift <em>Sets</em></h1><p class="page-subtitle">Curated pairs and trios, ready to give. Each arrives in our signature kraft box with a hand-written note card.</p></div>
+  <div class="products-grid-full" id="grid-gifts"></div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-accessories">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('all-candles')">← All Candles</div><h1 class="page-title"><em>Accessories</em></h1><p class="page-subtitle">Everything to tend your flame with intention.</p></div>
+  <div class="products-grid-full" id="grid-acc"></div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-sourcing">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home','about')">← Our Philosophy</div><h1 class="page-title">Ingredient<br/><em>Sourcing</em></h1><p class="page-subtitle">Every note has a place of origin, a grower, and a story. We travel to find them.</p></div>
+  <div class="inner-content">
+    <div class="section-label">Our Global Partners</div>
+    <div class="source-grid">
+      <div class="source-card"><div class="source-flag">🇲🇦</div><div class="source-region">Morocco</div><div class="source-name">Atlas Cedarwood</div><div class="source-desc">Wild-harvested from cedar forests of the Middle Atlas at 1,800m. Our partner cooperative is family-run since 1962.</div></div>
+      <div class="source-card"><div class="source-flag">🇧🇬</div><div class="source-region">Bulgaria</div><div class="source-name">Rose Absolute</div><div class="source-desc">Harvested at dawn in the Rose Valley of Kazanlak during the two-week blooming window each May. 1g yield per 1,000 roses.</div></div>
+      <div class="source-card"><div class="source-flag">🇯🇵</div><div class="source-region">Japan</div><div class="source-name">Hinoki Cypress</div><div class="source-desc">Steam-distilled from sustainably managed hinoki forests in Nara. The scent is a cornerstone of traditional Japanese bathing culture.</div></div>
+      <div class="source-card"><div class="source-flag">🇺🇸</div><div class="source-region">Pacific Northwest</div><div class="source-name">Douglas Fir & Sage</div><div class="source-desc">Cold-pressed from old-growth Douglas fir and wild coastal sage in Oregon's Coast Range. Zero-mile supply chain.</div></div>
+      <div class="source-card"><div class="source-flag">🇮🇳</div><div class="source-region">India</div><div class="source-name">Oud & Sandalwood</div><div class="source-desc">Ethically sourced agarwood from Assam and aged Mysore sandalwood. FSC-certified for all harvested material.</div></div>
+      <div class="source-card"><div class="source-flag">🇫🇷</div><div class="source-region">Grasse, France</div><div class="source-name">Jasmine Absolute</div><div class="source-desc">From the perfume capital of the world. Hand-picked jasmine from Domaine de Manon, preserving the historic Pays de Grasse tradition.</div></div>
+      <div class="source-card"><div class="source-flag">🇸🇴</div><div class="source-region">Somalia</div><div class="source-name">Frankincense</div><div class="source-desc">Boswellia sacra resin tapped sustainably from wild trees in Puntland. We pay 30% above fair-trade price to support reforestation.</div></div>
+      <div class="source-card"><div class="source-flag">🇲🇬</div><div class="source-region">Madagascar</div><div class="source-name">Ylang Ylang</div><div class="source-desc">First-fraction ylang ylang from Nosy Be island — the most delicate of all distillation cuts. Harvested in early morning hours.</div></div>
+    </div>
+    <div class="prose" style="margin-top:60px;"><h3>Our <em>principles</em></h3><ul><li>We visit every supplier before signing any agreement.</li><li>We pay a minimum 20% above market rate for all botanicals.</li><li>We do not use synthetic fragrance compounds in any blend.</li><li>We publish full ingredient lists for every product.</li><li>We audit all supplier environmental practices annually.</li></ul></div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-sustainability">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title"><em>Sustainability</em></h1><p class="page-subtitle">A candle that harms the planet isn't worth burning. Here's what we're doing about it.</p></div>
+  <div class="inner-content">
+    <div class="section-label">2025 Progress</div>
+    <div style="max-width:600px;">
+      <div class="sbar-wrap"><div class="sbar-top"><span class="sbar-label">Plant-based wax blend</span><span class="sbar-pct">100%</span></div><div class="sbar-track"><div class="sbar-fill" style="width:100%"></div></div></div>
+      <div class="sbar-wrap"><div class="sbar-top"><span class="sbar-label">Recycled packaging</span><span class="sbar-pct">94%</span></div><div class="sbar-track"><div class="sbar-fill" style="width:94%"></div></div></div>
+      <div class="sbar-wrap"><div class="sbar-top"><span class="sbar-label">Carbon-offset shipping</span><span class="sbar-pct">100%</span></div><div class="sbar-track"><div class="sbar-fill" style="width:100%"></div></div></div>
+      <div class="sbar-wrap"><div class="sbar-top"><span class="sbar-label">Supplier audits passed</span><span class="sbar-pct">87%</span></div><div class="sbar-track"><div class="sbar-fill" style="width:87%"></div></div></div>
+      <div class="sbar-wrap"><div class="sbar-top"><span class="sbar-label">Vessel take-back program</span><span class="sbar-pct">62%</span></div><div class="sbar-track"><div class="sbar-fill" style="width:62%"></div></div></div>
+    </div>
+    <div class="info-grid">
+      <div class="info-card"><h4>The Wax</h4><p>We blend coconut and rapeseed waxes — never paraffin. Our proprietary formula burns 40% cleaner and holds fragrance up to 30% longer than standard waxes.</p></div>
+      <div class="info-card"><h4>The Vessel</h4><p>All vessels are made from recycled glass. Mail them back using our prepaid label and we'll clean and refill them for 20% off your next purchase.</p></div>
+      <div class="info-card"><h4>The Packaging</h4><p>Boxes are printed on FSC-certified recycled card with soy-based inks. The tissue paper is seeded with wildflowers — plant it, don't bin it.</p></div>
+      <div class="info-card"><h4>The Shipping</h4><p>We've partnered with EcoCart to offset 100% of shipping emissions. Since 2022, we've offset 1,240 tonnes of CO₂ equivalent.</p></div>
+    </div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-press">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title">Press &<br/><em>Recognition</em></h1><p class="page-subtitle">For press inquiries, samples, or collaborations: <span style="color:var(--amber)">press@lumenos.co</span></p></div>
+  <div class="inner-content">
+    <div class="press-grid">
+      <div class="press-item"><div class="press-pub">Vogue Living</div><div class="press-quote">The best-smelling home in America probably burns Lumenos.</div><div class="press-date">November 2024 · Home Issue</div></div>
+      <div class="press-item"><div class="press-pub">The New York Times</div><div class="press-quote">An artisan candle brand that takes its sourcing as seriously as a Michelin-starred kitchen.</div><div class="press-date">October 2024 · Style Section</div></div>
+      <div class="press-item"><div class="press-pub">Architectural Digest</div><div class="press-quote">Lumenos sits among a new wave redefining what luxury means in a post-maximalist world.</div><div class="press-date">September 2024 · AD100</div></div>
+      <div class="press-item"><div class="press-pub">Monocle Magazine</div><div class="press-quote">The kind of candle you buy once and then wonder how you ever lived without it.</div><div class="press-date">August 2024 · Quality of Life Issue</div></div>
+      <div class="press-item"><div class="press-pub">Forbes</div><div class="press-quote">Among the top 10 fastest-growing luxury home goods brands of 2024.</div><div class="press-date">July 2024 · 30 Under 30 Brands</div></div>
+      <div class="press-item"><div class="press-pub">Dezeen</div><div class="press-quote">Lumenos proves that sustainability and luxury were always meant to share a shelf.</div><div class="press-date">May 2024 · Design Awards</div></div>
+    </div>
+    <div class="prose" style="margin-top:60px;"><h3>Press Kit</h3><p>High-resolution images, brand assets, and founder bios are available upon request. Email <span style="color:var(--amber)">press@lumenos.co</span> with your publication and deadline.</p><br/><button class="btn-primary" onclick="goTo('contact')">Contact Press Team</button></div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-shipping">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title">Shipping &<br/><em>Returns</em></h1></div>
+  <div class="inner-content">
+    <div class="info-grid">
+      <div class="info-card"><h4>Domestic Shipping</h4><p>Orders ship within 2 business days from our Portland studio. Standard (5–7 days) is $8, or free on orders over $75. Express (2 days) is $18.</p></div>
+      <div class="info-card"><h4>International Shipping</h4><p>We ship to 42 countries. International orders arrive in 8–14 business days. Duties and taxes may apply depending on your country.</p></div>
+      <div class="info-card"><h4>Returns</h4><p>We accept returns within 30 days of delivery for unused items in original packaging. Email <span style="color:var(--amber)">hello@lumenos.co</span> to start a return.</p></div>
+      <div class="info-card"><h4>Damaged Orders</h4><p>If your order arrives damaged, photograph it within 7 days and email us. We will replace your order at no charge, no questions asked.</p></div>
+    </div>
+    <div class="prose" style="margin-top:60px;"><h3>Shipping <em>timeline</em></h3><ul><li>Orders placed before 12pm PST ship same business day.</li><li>Orders placed after 12pm PST ship the next business day.</li><li>We do not ship on weekends or federal holidays.</li><li>Seasonal limited editions may have extended processing times of 3–5 days.</li></ul><h3>Return <em>policy</em></h3><p>Returns accepted within 30 days of delivery. Items must be unlit, in original packaging, and resalable. We do not accept returns on seasonal limited editions once released.</p><p>Refunds are processed within 5–7 business days to your original payment method.</p></div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-candle-care">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title">Candle<br/><em>Care</em></h1><p class="page-subtitle">A well-tended candle burns brighter, longer, and more evenly. Here's how to treat yours.</p></div>
+  <div class="inner-content">
+    <div class="care-steps">
+      <div class="care-step"><div class="care-num">01</div><h4>First Burn</h4><p>The first burn is the most important. Allow the wax to melt to the edges of the vessel before extinguishing — this prevents tunneling and sets the memory for every burn after.</p></div>
+      <div class="care-step"><div class="care-num">02</div><h4>Trim the Wick</h4><p>Before each burn, trim the wick to ¼ inch (6mm). A long wick causes excess smoke, soot, and uneven burning. Use scissors or a dedicated wick trimmer.</p></div>
+      <div class="care-step"><div class="care-num">03</div><h4>Burn Time</h4><p>Burn for no more than 4 hours at a time. Beyond this, the wick mushrooms, the wax pool overheats, and the fragrance dissipates less effectively.</p></div>
+      <div class="care-step"><div class="care-num">04</div><h4>Extinguishing</h4><p>Use a candle snuffer rather than blowing out the flame. Blowing distributes soot into the wax pool and can shift the wick off center.</p></div>
+      <div class="care-step"><div class="care-num">05</div><h4>Storage</h4><p>Store away from direct sunlight in a cool, dry place. UV exposure causes fragrance oils to oxidize and discolors wax. The lid is not decorative — use it.</p></div>
+      <div class="care-step"><div class="care-num">06</div><h4>End of Life</h4><p>When about ½ inch of wax remains, retire the candle. Pour boiling water into the vessel, pour it out, and mail the vessel back for our refill program.</p></div>
+    </div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-faq">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title">Frequently<br/><em>Asked</em></h1></div>
+  <div class="inner-content" style="max-width:800px;"><div id="faq-list"></div></div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-contact">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title">Get in<br/><em>Touch</em></h1></div>
+  <div class="inner-content">
+    <div class="contact-grid">
+      <div>
+        <div class="section-label">Send a Message</div>
+        <div class="contact-form">
+          <div class="form-group"><label class="form-label">Your Name</label><input class="form-input" type="text" placeholder="Jane Smith"/></div>
+          <div class="form-group"><label class="form-label">Email</label><input class="form-input" type="email" placeholder="jane@email.com"/></div>
+          <div class="form-group"><label class="form-label">Subject</label><select class="form-input form-select"><option>Order inquiry</option><option>Press & media</option><option>Wholesale</option><option>Refill program</option><option>General question</option></select></div>
+          <div class="form-group"><label class="form-label">Message</label><textarea class="form-textarea" placeholder="Tell us what's on your mind..."></textarea></div>
+          <button class="btn-primary" style="align-self:flex-start;" onclick="showToast('Message sent. We\'ll reply within 2 business days ✦')">Send Message</button>
+        </div>
+      </div>
+      <div>
+        <div class="section-label">Find Us</div>
+        <div class="contact-info-item"><div class="contact-info-label">Studio & Showroom</div><div class="contact-info-value">2241 NW Thurman St<br/>Portland, Oregon 97210<br/>Open Mon–Fri, 10am–5pm PST</div></div>
+        <div class="contact-info-item"><div class="contact-info-label">General Inquiries</div><div class="contact-info-value" style="color:var(--amber)">hello@lumenos.co</div></div>
+        <div class="contact-info-item"><div class="contact-info-label">Press & Partnerships</div><div class="contact-info-value" style="color:var(--amber)">press@lumenos.co</div></div>
+        <div class="contact-info-item"><div class="contact-info-label">Wholesale</div><div class="contact-info-value" style="color:var(--amber)">trade@lumenos.co</div></div>
+        <div class="contact-info-item"><div class="contact-info-label">Response Time</div><div class="contact-info-value">All messages receive a reply within 1–2 business days.</div></div>
+      </div>
+    </div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-wholesale">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title">Wholesale &<br/><em>Trade</em></h1><p class="page-subtitle">We partner with select retailers, hotels, spas, and interior designers.</p></div>
+  <div class="inner-content">
+    <table class="wholesale-table">
+      <thead><tr><th>Tier</th><th>Min. Order</th><th>Discount</th><th>Lead Time</th><th>Account Rep</th></tr></thead>
+      <tbody>
+        <tr><td>Boutique</td><td>$500</td><td>30% off retail</td><td>10–14 days</td><td>—</td></tr>
+        <tr><td>Retail Partner</td><td>$2,000</td><td>40% off retail</td><td>7–10 days</td><td>✦</td></tr>
+        <tr><td>Hospitality</td><td>Custom</td><td>Up to 50% off</td><td>3–5 days</td><td>✦</td></tr>
+        <tr><td>White Label</td><td>$10,000</td><td>Custom pricing</td><td>6–8 weeks</td><td>✦</td></tr>
+      </tbody>
+    </table>
+    <div class="prose" style="margin-top:60px;"><h3>How to <em>apply</em></h3><p>We review wholesale applications on a rolling basis. We're selective — not for exclusivity, but because we want every space carrying Lumenos to be one where our candles truly belong.</p><ul><li>Fill out our trade application with your business details.</li><li>Attach 2–3 photos of your space or storefront.</li><li>We respond within 5 business days with a decision and custom line sheet.</li></ul><br/><button class="btn-primary" onclick="goTo('contact')">Apply for a Trade Account</button></div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-instagram">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title">@lumenos<em>co</em></h1><p class="page-subtitle">Our world in pictures. Follow along for new blends, studio moments, and the spaces that inspire us.</p></div>
+  <div class="inner-content">
+    <div class="insta-grid" id="insta-grid"></div>
+    <div style="text-align:center;padding:48px 0;"><button class="btn-primary" onclick="showToast('Opening Instagram...')">Follow on Instagram</button></div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-pinterest">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title">Lumenos on<br/><em>Pinterest</em></h1><p class="page-subtitle">Mood boards, interior inspiration, and the atmospheres that inform every blend we create.</p></div>
+  <div class="inner-content">
+    <div class="section-label">Our Boards</div>
+    <div class="info-grid">
+      <div class="info-card" style="cursor:pointer;" onclick="showToast('Opening board...')"><h4>Dark Interiors</h4><p>The moody, amber-lit rooms that inspire our Signature Collection. 284 pins.</p></div>
+      <div class="info-card" style="cursor:pointer;" onclick="showToast('Opening board...')"><h4>Botanical Sources</h4><p>Landscapes and close-up photography from our ingredient sourcing travels. 147 pins.</p></div>
+      <div class="info-card" style="cursor:pointer;" onclick="showToast('Opening board...')"><h4>Ritual Spaces</h4><p>Bathtubs, reading corners, morning light — spaces designed for presence. 312 pins.</p></div>
+      <div class="info-card" style="cursor:pointer;" onclick="showToast('Opening board...')"><h4>Seasonal Moodboards</h4><p>The visual inspiration behind each limited edition release. 98 pins.</p></div>
+    </div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+<div class="page" id="page-newsletter-signup">
+  <div class="page-header"><div class="page-breadcrumb" onclick="goTo('home')">← Home</div><h1 class="page-title">The<br/><em>Dispatch</em></h1><p class="page-subtitle">A quiet newsletter. No noise, no daily emails. We write when we have something worth saying.</p></div>
+  <div class="inner-content" style="max-width:640px;">
+    <div class="section-label">Subscribe</div>
+    <div class="newsletter-form" style="max-width:100%;"><input type="email" id="nl-page" placeholder="your@email.com"/><button onclick="subscribe('nl-page')">Subscribe</button></div>
+    <div class="prose" style="margin-top:60px;">
+      <h3>What to <em>expect</em></h3>
+      <ul><li>Early access to seasonal limited editions before public release.</li><li>Long-form essays on fragrance, material culture, and slow living.</li><li>Behind-the-scenes from our sourcing travels.</li><li>Exclusive subscriber discounts — typically 15–20% off.</li><li>No more than 2 emails per month.</li></ul>
+      <h3>Past <em>issues</em></h3>
+      <p>"On the Atlas Mountains in November" — a dispatch from our 2024 sourcing trip to Morocco. What cedarwood smells like when you're standing in the forest that grew it.</p>
+      <p>"The First Burn Problem" — why most candles die by the end of their first evening, and what we do differently.</p>
+      <p>"A Vocabulary for Fragrance" — our perfumer's guide to describing what you smell with more precision and pleasure.</p>
+    </div>
+  </div>
+  <div class="mini-footer"><div class="mini-footer-copy">© 2025 Lumenos</div><button class="mini-footer-back" onclick="goTo('home')">← Home</button></div>
+</div>
+
+</div>
+
+<div id="cart-overlay" onclick="closeCart()"></div>
+<div id="cart-panel">
+  <div class="cart-header"><div class="cart-title">Your Cart</div><button class="cart-close" onclick="closeCart()">×</button></div>
+  <div class="cart-items" id="cart-items-list"><div class="cart-empty">Your cart is empty.</div></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span class="cart-total-label">Total</span><span class="cart-total-price" id="cart-total-price">$0</span></div>
+    <button class="cart-checkout-btn" onclick="checkout()">Proceed to Checkout</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+const PRODUCTS = [
+  {id:1,  name:'Atlas Cedarwood & Smoke',  sub:'Signature — 12oz', notes:'Smoky cedarwood, black pepper, vetiver',          price:68, cat:'signature'},
+  {id:2,  name:'Bulgarian Rose & Oud',     sub:'Signature — 8oz',  notes:'Bulgarian rose, Egyptian oud, musk',              price:54, cat:'signature'},
+  {id:3,  name:'Wild Hinoki & Sea Salt',   sub:'Signature — 8oz',  notes:'Hinoki cypress, sea salt, white tea',             price:54, cat:'signature'},
+  {id:4,  name:'Frankincense & Amber',     sub:'Signature — 12oz', notes:'Boswellia resin, warm amber, sandalwood',         price:68, cat:'signature'},
+  {id:5,  name:'Moroccan Jasmine',         sub:'Signature — 8oz',  notes:'Jasmine absolute, bergamot, warm cedar',          price:54, cat:'signature'},
+  {id:6,  name:'Pacific Douglas Fir',      sub:'Signature — 10oz', notes:'Douglas fir, sage, rain-washed earth',            price:58, cat:'signature'},
+  {id:7,  name:'Winter Solstice',          sub:'Seasonal — 10oz',  notes:'Beeswax, cinnamon bark, clove, frankincense',     price:62, cat:'seasonal', badge:'Limited'},
+  {id:8,  name:'First Snow',               sub:'Seasonal — 8oz',   notes:'Cool cedar, vetiver, white musks',                price:58, cat:'seasonal', badge:'Limited'},
+  {id:9,  name:'Fallen Leaves',            sub:'Seasonal — 8oz',   notes:'Dried fig, tobacco, smoked oud',                  price:58, cat:'seasonal', badge:'Sold Out', soldOut:true},
+  {id:10, name:'Midnight Garden',          sub:'Signature — 8oz',  notes:'Night-blooming jasmine, patchouli, musk',         price:54, cat:'signature'},
+  {id:11, name:'Ylang & Coconut',          sub:'Signature — 8oz',  notes:'Madagascar ylang, coconut cream, vanilla',        price:54, cat:'signature'},
+  {id:12, name:'Bergamot Morning',         sub:'Signature — 8oz',  notes:'Bergamot, green tea, fresh linen',                price:54, cat:'signature'},
+];
+const GIFTS = [
+  {id:'g1', name:'The Essential Duo',     sub:'2 candles',         notes:'Atlas Cedarwood & Smoke paired with Bulgarian Rose & Oud — our most complementary pairing.', price:118},
+  {id:'g2', name:'The Forest Trilogy',    sub:'3 candles',         notes:'Wild Hinoki, Pacific Douglas Fir, and Winter Solstice — for those who love the outside, inside.', price:162},
+  {id:'g3', name:'The Floral Collection', sub:'3 candles',         notes:'Moroccan Jasmine, Bulgarian Rose & Oud, and Ylang & Coconut. A trio of bloom.', price:162},
+  {id:'g4', name:'The Discovery Set',     sub:'4 × 2oz minis',     notes:'Four bestselling blends in travel-sized vessels. Perfect for the undecided or the curious.', price:72},
+  {id:'g5', name:'The Solstice Gift Box', sub:'2 candles + kit',   notes:'Our two current seasonal editions plus a wick trimmer and snuffer, in our signature gift box.', price:148},
+  {id:'g6', name:'The Complete Studio',   sub:'6 candles',         notes:'One of each signature blend. The full Lumenos experience, all at once.', price:288},
+];
+const ACCESSORIES = [
+  {id:'a1', name:'Wick Trimmer',       sub:'Matte black steel',    notes:'Keep wicks at the perfect ¼" height for a clean, even burn.', price:24},
+  {id:'a2', name:'Candle Snuffer',     sub:'Brass & walnut',       notes:'Extinguish cleanly without disturbing the wax pool or scattering soot.', price:32},
+  {id:'a3', name:'Vessel Brush Set',   sub:'Natural bristle × 2', notes:'Two-piece cleaning set for prepping vessels for our refill program.', price:18},
+  {id:'a4', name:'Teak Display Tray',  sub:'Reclaimed teak wood',  notes:'A 30cm tray for arranging your collection. Sealed with natural oils.', price:48},
+  {id:'a5', name:'Care Kit',           sub:'Trimmer + snuffer + tray', notes:'Everything you need to treat your candles right, bundled together.', price:72},
+  {id:'a6', name:'Linen Dust Covers',  sub:'Set of 3',             notes:'Protect your collection between burns with natural linen lid covers.', price:22},
+];
+const FAQS = [
+  {q:'How long do Lumenos candles burn?', a:'Depending on the size, our candles burn for 50–70 hours. 8oz: 50–55 hours. 10oz: 58–62 hours. 12oz: 65–70 hours. These times assume correct wick trimming and burns limited to 4 hours at a time.'},
+  {q:'What is your wax made from?', a:'All Lumenos candles use a proprietary blend of coconut and rapeseed waxes. We do not use paraffin, soy, or palm wax. Our blend is 100% plant-derived, burns cleanly, and holds fragrance longer than any single-wax formula we\'ve tested.'},
+  {q:'Are your candles safe for pets?', a:'Our candles do not contain compounds known to be toxic to cats or dogs. We recommend burning candles in well-ventilated rooms and keeping them out of reach of pets. If your pet has respiratory sensitivities, burn the candle in a separate room.'},
+  {q:'Can I get a refill?', a:'Yes — our refill program is one of our favorite things. Once your candle is finished, clean the vessel and mail it back using our prepaid label. We\'ll refill it with your chosen scent and return it for 20% off the standard price.'},
+  {q:'Do you offer gift wrapping?', a:'All orders arrive in our signature kraft box with tissue and a wax seal. For gift orders, add a note in your cart and we\'ll include a hand-written note card at no extra charge. Premium ribbon upgrade is $6.'},
+  {q:'Are your fragrances natural or synthetic?', a:'All fragrance oils are composed entirely of natural isolates and absolutes. We do not use synthetic compounds. This makes our candles more expensive to produce and limits our batch sizes — but it\'s non-negotiable for us.'},
+  {q:'How should I store my candles?', a:'Store in a cool, dry place away from direct sunlight. UV exposure degrades fragrance oils and discolors wax over time. The lid included with every candle is designed to protect the surface — use it between burns.'},
+  {q:'Do you ship internationally?', a:'We ship to 42 countries across North America, Europe, Oceania, and parts of Asia. International shipping takes 8–14 business days. Duties and taxes are the recipient\'s responsibility and vary by country.'},
+];
+const INSTA = [
+  {bg:'rgba(200,135,58,0.1)', label:'Studio Morning'},
+  {bg:'rgba(80,52,22,0.4)',   label:'Raw Materials'},
+  {bg:'rgba(30,20,10,0.85)',  label:'Wick Detail'},
+  {bg:'rgba(150,100,50,0.2)', label:'Pour Session'},
+  {bg:'rgba(60,40,20,0.5)',   label:'The Atlas, Morocco'},
+  {bg:'rgba(200,135,58,0.07)',label:'Collection Flat Lay'},
+  {bg:'rgba(80,54,24,0.55)',  label:'Evening Ritual'},
+  {bg:'rgba(200,135,58,0.14)',label:'Gift Wrapping'},
+  {bg:'rgba(40,26,12,0.7)',   label:'Flame Close-Up'},
+];
+
+let _svgUid = 0;
+function candleSVG(type) {
+  const id = 'sv' + (++_svgUid);
+  const flame = (y1, y2) => `<path d="M${60} ${y1} C${53} ${y1+10} ${49} ${y1+18} ${52} ${y1+28} C${55} ${y1+35} ${60} ${y1+38} ${60} ${y1+38} C${60} ${y1+38} ${65} ${y1+35} ${68} ${y1+28} C${71} ${y1+18} ${67} ${y1+10} ${60} ${y1}Z" fill="url(#pf${id})"/><line x1="${60}" y1="${y1+38}" x2="${60}" y2="${y1+28}" stroke="#3A2A1A" stroke-width="1.5"/><ellipse cx="${60}" cy="${y1+14}" rx="25" ry="17" fill="rgba(200,135,58,0.1)"/>`;
+  const grad = (y1, y2) => `<defs><linearGradient id="pf${id}" x1="${60}" y1="${y1}" x2="${60}" y2="${y2}" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#FFF3C0"/><stop offset="50%" stop-color="#F5A623"/><stop offset="100%" stop-color="#C8501A"/></linearGradient></defs>`;
+  if (type === 'round') return `<svg viewBox="0 0 120 160" width="86" fill="none"><rect x="24" y="55" width="72" height="95" rx="36" fill="#1A1410"/>${flame(20, 58)}${grad(20,58)}</svg>`;
+  if (type === 'tall')  return `<svg viewBox="0 0 120 190" width="86" fill="none"><rect x="28" y="62" width="64" height="120" rx="4" fill="#1C1510"/>${flame(18,56)}${grad(18,56)}</svg>`;
+  return `<svg viewBox="0 0 120 165" width="86" fill="none"><rect x="25" y="50" width="70" height="106" rx="4" fill="#1C1510"/>${flame(15,53)}${grad(15,53)}</svg>`;
+}
+
+const types = ['tall','medium','round','medium','tall','round','medium','round','tall','medium','round','tall'];
+function productCard(p, i) {
+  const badge = p.badge ? `<div class="seasonal-badge">${p.badge}</div>` : '';
+  const addBtn = p.soldOut
+    ? `<button class="product-add" disabled style="opacity:.4;cursor:not-allowed;">Sold Out</button>`
+    : `<button class="product-add" onclick="addToCart('${p.name.replace(/'/g,"\\'")}','${p.sub}',${p.price})">Add to cart</button>`;
+  return `<div class="product-card">${badge}<div class="product-visual">${candleSVG(types[i%types.length])}</div><div class="product-info"><div class="product-name">${p.name}</div><div class="product-sub">${p.sub}</div><div class="product-notes">${p.notes}</div><div class="product-price">$${p.price} ${addBtn}</div></div></div>`;
+}
+function giftCard(g) {
+  return `<div class="product-card"><div class="product-visual">${candleSVG('tall')}</div><div class="product-info"><div class="product-name">${g.name}</div><div class="product-sub">${g.sub}</div><div class="product-notes">${g.notes}</div><div class="product-price">$${g.price}<button class="product-add" onclick="addToCart('${g.name.replace(/'/g,"\\'")}','${g.sub}',${g.price})">Add to cart</button></div></div></div>`;
+}
+
+function buildGrids() {
+  document.getElementById('grid-all').innerHTML       = PRODUCTS.map((p,i) => productCard(p,i)).join('');
+  document.getElementById('grid-signature').innerHTML = PRODUCTS.filter(p=>p.cat==='signature').map((p,i)=>productCard(p,i)).join('');
+  document.getElementById('grid-seasonal').innerHTML  = PRODUCTS.filter(p=>p.cat==='seasonal').map((p,i)=>productCard(p,i)).join('');
+  document.getElementById('grid-gifts').innerHTML     = GIFTS.map(g=>giftCard(g)).join('');
+  document.getElementById('grid-acc').innerHTML       = ACCESSORIES.map(a=>productCard({...a,cat:'acc',notes:a.notes},0)).join('');
+}
+function buildFAQ() {
+  document.getElementById('faq-list').innerHTML = FAQS.map((f,i)=>`
+    <div class="faq-item">
+      <div class="faq-question" onclick="toggleFaq(${i})"><span>${f.q}</span><span class="faq-toggle" id="ft${i}">+</span></div>
+      <div class="faq-answer" id="fa${i}"><div class="faq-answer-inner">${f.a}</div></div>
+    </div>`).join('');
+}
+function buildInsta() {
+  document.getElementById('insta-grid').innerHTML = INSTA.map(m=>`<div class="insta-cell" style="background:${m.bg};" onclick="showToast('${m.label}')"><span class="insta-cell-label">${m.label}</span></div>`).join('');
+}
+
+function goTo(pageId, anchor) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const t = document.getElementById('page-' + pageId);
+  if (t) { t.classList.add('active'); window.scrollTo({top:0,behavior:'instant'}); }
+  if (anchor) setTimeout(() => { const el = document.getElementById(anchor); if (el) el.scrollIntoView({behavior:'smooth'}); }, 60);
+}
+
+let cart = [];
+function addToCart(name, sub, price) {
+  const ex = cart.find(i=>i.name===name);
+  if (ex) ex.qty++; else cart.push({name, sub, price, qty:1});
+  renderCart();
+  showToast(name + ' added to cart');
+}
+function removeFromCart(name) { cart = cart.filter(i=>i.name!==name); renderCart(); }
+function renderCart() {
+  const count = cart.reduce((s,i)=>s+i.qty,0);
+  const total = cart.reduce((s,i)=>s+i.price*i.qty,0);
+  const el = document.getElementById('cart-count');
+  el.textContent = count; el.classList.toggle('visible', count>0);
+  document.getElementById('cart-total-price').textContent = '$' + total;
+  const list = document.getElementById('cart-items-list');
+  if (!cart.length) { list.innerHTML = '<div class="cart-empty">Your cart is empty.</div>'; return; }
+  list.innerHTML = cart.map(i=>`<div class="cart-item"><div><div class="cart-item-name">${i.name}</div><div class="cart-item-sub">${i.sub}${i.qty>1?' × '+i.qty:''}</div><div class="cart-item-price">$${i.price*i.qty}</div><button class="cart-item-remove" onclick="removeFromCart('${i.name.replace(/'/g,"\\'")}')">Remove</button></div></div>`).join('');
+}
+function openCart() { document.getElementById('cart-overlay').classList.add('open'); document.getElementById('cart-panel').classList.add('open'); }
+function closeCart() { document.getElementById('cart-overlay').classList.remove('open'); document.getElementById('cart-panel').classList.remove('open'); }
+function checkout() {
+  if (!cart.length) { showToast('Your cart is empty!'); return; }
+  cart = []; renderCart(); closeCart(); showToast('Order placed — thank you! ✦');
+}
+
+let _toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(()=>t.classList.remove('show'), 2800);
+}
+
+function subscribe(id) {
+  const el = document.getElementById(id);
+  if (!el.value.includes('@')) { showToast('Please enter a valid email.'); return; }
+  el.value = ''; showToast('Subscribed. Welcome to the Dispatch ✦');
+}
+
+function toggleFaq(i) {
+  const ans = document.getElementById('fa'+i), tog = document.getElementById('ft'+i);
+  const open = ans.classList.contains('open');
+  document.querySelectorAll('.faq-answer').forEach(a=>a.classList.remove('open'));
+  document.querySelectorAll('.faq-toggle').forEach(t=>t.textContent='+');
+  if (!open) { ans.classList.add('open'); tog.textContent='−'; }
+}
+
+document.addEventListener('DOMContentLoaded', () => { buildGrids(); buildFAQ(); buildInsta(); });
+</script>
 </body>
 </html>
